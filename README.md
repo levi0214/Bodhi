@@ -8,8 +8,7 @@ Bodhi is a protocol for content incentivization. It turns any [Arweave](https://
 
 Bodhi is deployed on [Optimism](https://www.optimism.io/) (an Ethereum layer 2). 
 
-1. The entire protocol consists of only 100 lines of code, allowing you to understand it in 10 minutes. 
-2. When you read the application code, you will find it very easy to build on Bodhi.
+The entire protocol consists of just 100 lines of code, enabling you to understand it within 10 minutes. If you are interested in building on Bodhi, you can explore the application code, which is also straightforward and consists of only 60 lines of code.
 
 ### Core
 
@@ -30,7 +29,7 @@ Bodhi is deployed on [Optimism](https://www.optimism.io/) (an Ethereum layer 2).
 **SpaceFactory.sol / Space.sol**
 
 - **Contract Address**: [0xa14d19387c83b56343fc2e7a8707986af6a74d08](https://optimistic.etherscan.io/address/0xa14d19387c83b56343fc2e7a8707986af6a74d08#code)
-- **Description**: The first application on Bodhi, permissionless discussion groups, with 60 lines of code.
+- **Description**: The first application on Bodhi, permissionless discussion groups (like Reddit), with 60 lines of code.
 
 ## Deploy in Local Environment (for developers)
 
