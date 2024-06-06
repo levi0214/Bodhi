@@ -2,16 +2,23 @@
 
 Official repository for Bodhi contracts, including core protocol, peripheral contracts, and applications.
 
+Bodhi is a protocol for content incentivization. It turns any [Arweave](https://arweave.org) ID into a speculative asset, just like a mini company. When more people buy its shares, the price goes up. [Learn more](#learn-more-about-bodhi).
+
 ## Contracts
 
-### Core Protocol
+Bodhi is deployed on [Optimism](https://www.optimism.io/) (an Ethereum layer 2). 
+
+1. The entire protocol consists of only 100 lines of code, allowing you to understand it in 10 minutes. 
+2. When you read the application code, you will find it very easy to build on Bodhi.
+
+### Core
 
 **Bodhi.sol**
 
 - **Contract Address**: [0x2ad82a4e39bac43a54ddfe6f94980aaf0d1409ef](https://optimistic.etherscan.io/address/0x2ad82a4e39bac43a54ddfe6f94980aaf0d1409ef#code)
-- **Description**: This is the main protocol contract, with 100 lines of code.
+- **Description**: This is the main contract, with 100 lines of code.
 
-### Peripheral Contracts
+### Peripheral
 
 **BodhiTradeHelper.sol**
 
