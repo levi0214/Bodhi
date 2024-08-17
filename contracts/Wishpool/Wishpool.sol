@@ -9,6 +9,7 @@ contract Wishpool is ERC1155TokenReceiver {
     IBodhi public immutable bodhi;
 
     struct Pool {
+        address creator;
         address solver;
         bool completed;
     }
@@ -26,7 +27,7 @@ contract Wishpool is ERC1155TokenReceiver {
     // special pool: createPool('', 0x...)
     function createPool(string calldata arTxId, address solver) external {
         uint256 poolId = bodhi.assetIndex();
-        pools[poolId] = Pool(solver, false);
+        pools[poolId] = Pool(msg.sender, solver, false);
         emit Create(poolId, msg.sender, solver);
         bodhi.create(arTxId);
     }
@@ -35,9 +36,8 @@ contract Wishpool is ERC1155TokenReceiver {
         Pool memory pool = pools[poolId];
         require(!pool.completed, "Pool already completed");
 
-        (, , address creator) = bodhi.assets(poolId);
         require(
-            (pool.solver == address(0) && msg.sender == creator) ||
+            (pool.solver == address(0) && msg.sender == pool.creator) ||
                 (pool.solver != address(0) && msg.sender == pool.solver),
             "Unauthorized"
         );
