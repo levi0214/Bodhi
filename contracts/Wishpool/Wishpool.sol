@@ -55,6 +55,7 @@ contract Wishpool is ERC1155TokenReceiver {
     receive() external payable {}
 }
 
+// TODO handle received fees
 // TODO do we need to combine create & buy together?
 // TODO do we need addFund function?
 // TODO in complete, check totalSupply, don't sell below 1 supply
