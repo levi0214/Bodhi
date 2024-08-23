@@ -13,56 +13,33 @@ contract WishpoolCompleteTest is WishpoolBaseTest {
 
     function setUp() public override {
         super.setUp();
-        
-        vm.startPrank(alice);
-        regularPoolId = bodhi.assetIndex();
-        wishpool.createPool("regularPoolTxId", address(0));
-        
-        specialPoolId = bodhi.assetIndex();
-        wishpool.createPool("specialPoolTxId", bob);
-        vm.stopPrank();
+        (regularPoolId, specialPoolId) = _createTestPools();
     }
 
     function test_CompleteRegularPool() public {
-        // Add some funds to the pool
-        vm.startPrank(bob);
         uint256 fundAmount = 1 ether;
-        uint256 buyPrice = bodhi.getBuyPriceAfterFee(regularPoolId, fundAmount);
-        bodhi.buy{value: buyPrice}(regularPoolId, fundAmount);
-        bodhi.safeTransferFrom(bob, address(wishpool), regularPoolId, fundAmount, "");
-        vm.stopPrank();
+        _addFundsToPool(bob, regularPoolId, fundAmount);
 
-        vm.startPrank(alice);
         vm.expectEmit(true, true, true, true);
         emit Complete(regularPoolId, bob, INITIAL_SHARE + fundAmount);
-        wishpool.complete(regularPoolId, bob);
-        vm.stopPrank();
 
-        (,, bool completed) = wishpool.pools(regularPoolId);
-        assertTrue(completed, "Pool should be marked as completed");
-        assertEq(bodhi.balanceOf(bob, regularPoolId), INITIAL_SHARE + fundAmount, "Solver should receive the pool balance plus initial share");
-        assertEq(bodhi.balanceOf(address(wishpool), regularPoolId), 0, "Wishpool balance should be zero after completion");
+        vm.prank(alice);
+        wishpool.complete(regularPoolId, bob);
+
+        _assertPoolCompleted(regularPoolId, bob, INITIAL_SHARE + fundAmount);
     }
 
     function test_CompleteSpecialPool() public {
-        // Add some funds to the pool
-        vm.startPrank(alice);
         uint256 fundAmount = 1 ether;
-        uint256 buyPrice = bodhi.getBuyPriceAfterFee(specialPoolId, fundAmount);
-        bodhi.buy{value: buyPrice}(specialPoolId, fundAmount);
-        bodhi.safeTransferFrom(alice, address(wishpool), specialPoolId, fundAmount, "");
-        vm.stopPrank();
+        _addFundsToPool(alice, specialPoolId, fundAmount);
 
-        vm.startPrank(bob);
         vm.expectEmit(true, true, true, true);
         emit Complete(specialPoolId, bob, INITIAL_SHARE + fundAmount);
-        wishpool.complete(specialPoolId, bob);
-        vm.stopPrank();
 
-        (,, bool completed) = wishpool.pools(specialPoolId);
-        assertTrue(completed, "Pool should be marked as completed");
-        assertEq(bodhi.balanceOf(bob, specialPoolId), INITIAL_SHARE + fundAmount, "Solver should receive the pool balance plus initial share");
-        assertEq(bodhi.balanceOf(address(wishpool), specialPoolId), 0, "Wishpool balance should be zero after completion");
+        vm.prank(bob);
+        wishpool.complete(specialPoolId, bob);
+
+        _assertPoolCompleted(specialPoolId, bob, INITIAL_SHARE + fundAmount);
     }
 
     function testFail_CompleteRegularPoolUnauthorized() public {
@@ -81,41 +58,59 @@ contract WishpoolCompleteTest is WishpoolBaseTest {
     }
 
     function test_CompleteEmptyPool() public {
-        vm.startPrank(alice);
         vm.expectEmit(true, true, true, true);
         emit Complete(regularPoolId, bob, INITIAL_SHARE);
-        wishpool.complete(regularPoolId, bob);
-        vm.stopPrank();
 
-        (,, bool completed) = wishpool.pools(regularPoolId);
-        assertTrue(completed, "Pool should be marked as completed even if empty");
-        assertEq(bodhi.balanceOf(bob, regularPoolId), INITIAL_SHARE, "Solver should receive the initial share");
+        vm.prank(alice);
+        wishpool.complete(regularPoolId, bob);
+
+        _assertPoolCompleted(regularPoolId, bob, INITIAL_SHARE);
     }
 
     function testFail_CompleteAlreadyCompletedPool() public {
-        vm.prank(alice);
+        vm.startPrank(alice);
         wishpool.complete(regularPoolId, bob);
-
-        vm.prank(alice);
         wishpool.complete(regularPoolId, bob);
+        vm.stopPrank();
     }
 
     function test_CompleteLargePool() public {
-        // Add a large amount of funds to the pool
-        vm.deal(bob, 21000 ether);
-        vm.startPrank(bob);
         uint256 fundAmount = 1000 ether;
-        uint256 buyPrice = bodhi.getBuyPriceAfterFee(regularPoolId, fundAmount);
-        bodhi.buy{value: buyPrice}(regularPoolId, fundAmount);
-        bodhi.safeTransferFrom(bob, address(wishpool), regularPoolId, fundAmount, "");
-        vm.stopPrank();
+        vm.deal(bob, 21000 ether);
+        _addFundsToPool(bob, regularPoolId, fundAmount);
 
-        vm.startPrank(alice);
         vm.expectEmit(true, true, true, true);
         emit Complete(regularPoolId, bob, INITIAL_SHARE + fundAmount);
-        wishpool.complete(regularPoolId, bob);
-        vm.stopPrank();
 
-        assertEq(bodhi.balanceOf(bob, regularPoolId), INITIAL_SHARE + fundAmount, "Solver should receive the large pool balance plus initial share");
+        vm.prank(alice);
+        wishpool.complete(regularPoolId, bob);
+
+        _assertPoolCompleted(regularPoolId, bob, INITIAL_SHARE + fundAmount);
+    }
+
+    function _createTestPools() internal returns (uint256, uint256) {
+        vm.startPrank(alice);
+        uint256 _regularPoolId = bodhi.assetIndex();
+        wishpool.createPool("regularPoolTxId", address(0));
+
+        uint256 _specialPoolId = bodhi.assetIndex();
+        wishpool.createPool("specialPoolTxId", bob);
+        vm.stopPrank();
+        return (_regularPoolId, _specialPoolId);
+    }
+
+    function _addFundsToPool(address funder, uint256 poolId, uint256 fundAmount) internal {
+        vm.startPrank(funder);
+        uint256 buyPrice = bodhi.getBuyPriceAfterFee(poolId, fundAmount);
+        bodhi.buy{value: buyPrice}(poolId, fundAmount);
+        bodhi.safeTransferFrom(funder, address(wishpool), poolId, fundAmount, "");
+        vm.stopPrank();
+    }
+
+    function _assertPoolCompleted(uint256 poolId, address solver, uint256 expectedBalance) internal view {
+        (,, bool completed) = wishpool.pools(poolId);
+        assertTrue(completed, "Pool should be marked as completed");
+        assertEq(bodhi.balanceOf(solver, poolId), expectedBalance, "Solver should receive the expected balance");
+        assertEq(bodhi.balanceOf(address(wishpool), poolId), 0, "Wishpool balance should be zero after completion");
     }
 }
