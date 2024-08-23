@@ -1,5 +1,7 @@
 # Bodhi
 
+(Migrated from original Bodhi repo)
+
 Official repository for Bodhi contracts, including core protocol, peripheral contracts, and applications.
 
 Bodhi is a protocol for content incentivization. It turns any [Arweave](https://arweave.org) ID into a speculative asset, just like a mini company. When more people buy its shares, the price goes up. [Learn more](#learn-more-about-bodhi).
@@ -30,44 +32,6 @@ The entire protocol consists of just 100 lines of code, enabling you to understa
 
 - **Contract Address**: [0xa14d19387c83b56343fc2e7a8707986af6a74d08](https://optimistic.etherscan.io/address/0xa14d19387c83b56343fc2e7a8707986af6a74d08#code)
 - **Description**: The first application on Bodhi, permissionless discussion groups (like Reddit), with 60 lines of code.
-
-## Deploy in Local Environment (for developers)
-
-To use the contracts in your local environment, follow these steps:
-
-### Requirements
-
-Ensure you have [Node.js](https://nodejs.org/) and [Hardhat](https://hardhat.org/) installed.
-
-### Running a Local Node
-
-```bash
-npx hardhat node
-```
-
-### Deployments
-
-**Deploy Bodhi Protocol**
-
-```bash
-npx hardhat run scripts/deploy.js --network localhost
-```
-
-**Deploy Peripheral Contract: Trade Helper**
-
-```bash
-npx hardhat run scripts/peripheral/deployTradeHelper.js --network localhost
-```
-
-**Deploy Application: Bodhi Space Factory**
-
-```bash
-npx hardhat run scripts/Space/deploy.js --network localhost
-```
-
-## Notice
-
-This repository is migrated from the original repository. It omits unrelated code and all tests. We plan to migrate from Hardhat to Foundry in the future to enhance our development workflows.
 
 ## Learn More About Bodhi
 
