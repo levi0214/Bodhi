@@ -2,11 +2,11 @@
 pragma solidity ^0.8.18;
 
 import {ERC1155TokenReceiver} from "../peripheral/ERC1155TokenReceiver.sol";
-import "../interface/IBodhi.sol";
+import {IBodhi} from "../interface/IBodhi.sol";
 
 // combined SpecialPool and RegularPool
 contract Wishpool is ERC1155TokenReceiver {
-    IBodhi public immutable bodhi;
+    IBodhi public immutable BODHI;
 
     struct Pool {
         address creator;
@@ -20,16 +20,16 @@ contract Wishpool is ERC1155TokenReceiver {
     event Complete(uint256 indexed poolId, address indexed solver, uint256 amount);
 
     constructor(address _bodhi) {
-        bodhi = IBodhi(_bodhi);
+        BODHI = IBodhi(_bodhi);
     }
 
     // regular pool: createPool('', address(0))
     // special pool: createPool('', 0x...)
     function createPool(string calldata arTxId, address solver) external {
-        uint256 poolId = bodhi.assetIndex();
+        uint256 poolId = BODHI.assetIndex();
         pools[poolId] = Pool(msg.sender, solver, false);
         emit Create(poolId, msg.sender, solver);
-        bodhi.create(arTxId);
+        BODHI.create(arTxId);
     }
 
     function complete(uint256 poolId, address solver) external {
@@ -45,10 +45,10 @@ contract Wishpool is ERC1155TokenReceiver {
         if (pool.solver == address(0)) pool.solver = solver;
         pools[poolId].completed = true;
 
-        uint256 balance = bodhi.balanceOf(address(this), poolId);
+        uint256 balance = BODHI.balanceOf(address(this), poolId);
         emit Complete(poolId, pool.solver, balance);
         if (balance > 0) {
-            bodhi.safeTransferFrom(address(this), pool.solver, poolId, balance, "");
+            BODHI.safeTransferFrom(address(this), pool.solver, poolId, balance, "");
         }
     }
 
