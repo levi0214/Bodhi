@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
-import {ERC1155} from "solmate/src/tokens/ERC1155.sol";
+import {ERC1155} from "solmate/tokens/ERC1155.sol";
 error Unauthorized();
 
 contract Bodhi is ERC1155 {

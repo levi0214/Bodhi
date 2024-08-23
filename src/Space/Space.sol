@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
-import {ERC1155TokenReceiver} from "solmate/src/tokens/ERC1155.sol";
+import {ERC1155TokenReceiver} from "solmate/tokens/ERC1155.sol";
 import "../interface/IBodhi.sol";
 
 contract Space is ERC1155TokenReceiver {
