@@ -6,7 +6,13 @@ interface IBodhi {
     // ERC1155
     function balanceOf(address, uint256) external view returns (uint256);
     function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes calldata data) external;
-    function safeBatchTransferFrom(address from, address to, uint256[] calldata ids, uint256[] calldata amounts, bytes calldata data) external;
+    function safeBatchTransferFrom(
+        address from,
+        address to,
+        uint256[] calldata ids,
+        uint256[] calldata amounts,
+        bytes calldata data
+    ) external;
 
     // Bodhi - read
     function assets(uint256 assetId) external view returns (uint256 id, string memory arTxId, address creator);
@@ -17,7 +23,7 @@ interface IBodhi {
     function getBuyPriceAfterFee(uint256 assetId, uint256 amount) external view returns (uint256);
     function getSellPrice(uint256 assetId, uint256 amount) external view returns (uint256);
     function getSellPriceAfterFee(uint256 assetId, uint256 amount) external view returns (uint256);
-    
+
     // Bodhi - write
     function create(string calldata arTxId) external;
     function remove(uint256 assetId) external;

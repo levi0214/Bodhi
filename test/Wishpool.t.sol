@@ -41,7 +41,11 @@ contract WishpoolTest is Test, ERC1155TokenReceiver {
         assertEq(assetCreator, address(wishpool), "Asset creator should be the Wishpool contract");
 
         // Check if Wishpool received the initial token balance
-        assertEq(bodhi.balanceOf(address(wishpool), initialAssetIndex), 1 ether, "Wishpool should have received the initial token balance");
+        assertEq(
+            bodhi.balanceOf(address(wishpool), initialAssetIndex),
+            1 ether,
+            "Wishpool should have received the initial token balance"
+        );
 
         vm.stopPrank();
     }

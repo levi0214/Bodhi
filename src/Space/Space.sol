@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
+
 import {ERC1155TokenReceiver} from "solmate/tokens/ERC1155.sol";
 import "../interface/IBodhi.sol";
 
@@ -11,15 +12,15 @@ contract Space is ERC1155TokenReceiver {
     uint256 public immutable spaceAssetId;
     address public immutable owner;
     string public name;
-    
+
     constructor(uint256 _assetId, string memory _name, address _owner) {
         (,, address creator) = bodhi.assets(_assetId);
-        require(_owner == creator, "Only creator can create its Space");  // also revert if asset not exist or creator is zero
+        require(_owner == creator, "Only creator can create its Space"); // also revert if asset not exist or creator is zero
         spaceAssetId = _assetId;
         name = _name;
         owner = _owner;
     }
-    
+
     mapping(uint256 => uint256) public assetToParent;
     mapping(uint256 => address) public assetToCreator;
 
@@ -38,7 +39,7 @@ contract Space is ERC1155TokenReceiver {
 
     function removeFromSpace(uint256[] calldata assetIds) external {
         require(msg.sender == owner, "Only owner can remove");
-        for(uint256 i = 0; i < assetIds.length; i++) {
+        for (uint256 i = 0; i < assetIds.length; i++) {
             delete assetToParent[assetIds[i]];
             emit Remove(assetIds[i]);
         }
@@ -48,13 +49,13 @@ contract Space is ERC1155TokenReceiver {
         require(assetToCreator[assetId] == msg.sender, "Only creator can remove");
         bodhi.remove(assetId);
     }
-    
+
     function buyback(uint256 amount, uint256 maxPrice) external {
         require(msg.sender == owner, "Only owner can buyback");
         uint256 price = bodhi.getBuyPriceAfterFee(spaceAssetId, amount);
-        require(price <= maxPrice, "Price too high");  // prevent potential MEV in the future
+        require(price <= maxPrice, "Price too high"); // prevent potential MEV in the future
         bodhi.buy{value: price}(spaceAssetId, amount);
     }
-    
-    receive () external payable {}
+
+    receive() external payable {}
 }

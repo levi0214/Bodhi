@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
+
 import {ERC1155} from "solmate/tokens/ERC1155.sol";
+
 error Unauthorized();
 
 contract Bodhi is ERC1155 {
@@ -101,7 +103,7 @@ contract Bodhi is ERC1155 {
         pool[assetId] += price;
         _mint(msg.sender, assetId, amount, "");
         emit Trade(TradeType.Buy, assetId, msg.sender, amount, price, creatorFee);
-        (bool creatorFeeSent, ) = payable(assets[assetId].creator).call{value: creatorFee}("");
+        (bool creatorFeeSent,) = payable(assets[assetId].creator).call{value: creatorFee}("");
         require(creatorFeeSent, "Failed to send Ether");
     }
 
@@ -116,8 +118,8 @@ contract Bodhi is ERC1155 {
         totalSupply[assetId] = supply - amount;
         pool[assetId] -= price;
         emit Trade(TradeType.Sell, assetId, msg.sender, amount, price, creatorFee);
-        (bool sent, ) = payable(msg.sender).call{value: price - creatorFee}("");
-        (bool creatorFeeSent, ) = payable(assets[assetId].creator).call{value: creatorFee}("");
+        (bool sent,) = payable(msg.sender).call{value: price - creatorFee}("");
+        (bool creatorFeeSent,) = payable(assets[assetId].creator).call{value: creatorFee}("");
         require(sent && creatorFeeSent, "Failed to send Ether");
     }
 

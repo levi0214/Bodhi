@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
+
 import {ERC1155TokenReceiver} from "solmate/tokens/ERC1155.sol";
 import "../interface/IBodhi.sol";
 
-contract BodhiTradeHelper is ERC1155TokenReceiver{
+contract BodhiTradeHelper is ERC1155TokenReceiver {
     event SafeBuy(uint256 indexed assetId, address indexed sender, uint256 tokenAmount, uint256 ethAmount);
+
     IBodhi public immutable bodhi;
+
     constructor(address _bodhi) {
         bodhi = IBodhi(_bodhi);
     }
@@ -18,7 +21,7 @@ contract BodhiTradeHelper is ERC1155TokenReceiver{
         bodhi.buy{value: price}(assetId, amount);
         bodhi.safeTransferFrom(address(this), msg.sender, assetId, amount, "");
         if (msg.value > price) {
-            (bool refunded, ) = payable(msg.sender).call{value: msg.value - price}("");
+            (bool refunded,) = payable(msg.sender).call{value: msg.value - price}("");
             require(refunded, "Failed to refund excess payment");
         }
     }

@@ -51,7 +51,7 @@ contract SpecialPool is ERC1155TokenReceiver {
         require(msg.sender == bounty.receiver, "Only receiver can complete the bounty");
         require(!bounty.completed, "Bounty already completed");
 
-        (, , address assetCreator) = bodhi.assets(assetId);
+        (,, address assetCreator) = bodhi.assets(assetId);
         require(assetCreator == bounty.receiver, "Asset creator is not bounty receiver");
 
         bounty.completed = true;
@@ -64,7 +64,7 @@ contract SpecialPool is ERC1155TokenReceiver {
 
         if (amount > 0) {
             bodhi.sell(bountyId, amount);
-            (bool sent, ) = assetCreator.call{value: sellPrice}("");
+            (bool sent,) = assetCreator.call{value: sellPrice}("");
             require(sent, "Failed to send Ether");
         }
         emit Complete(bountyId, assetCreator, amount, sellPrice);

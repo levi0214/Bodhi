@@ -37,8 +37,8 @@ contract Wishpool is ERC1155TokenReceiver {
         require(!pool.completed, "Pool already completed");
 
         require(
-            (pool.solver == address(0) && msg.sender == pool.creator) ||
-                (pool.solver != address(0) && msg.sender == pool.solver),
+            (pool.solver == address(0) && msg.sender == pool.creator)
+                || (pool.solver != address(0) && msg.sender == pool.solver),
             "Unauthorized"
         );
 

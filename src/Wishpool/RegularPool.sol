@@ -13,21 +13,27 @@ contract RegularPool is ERC1155TokenReceiver {
     IBodhi public immutable bodhi;
 
     event Create(uint256 indexed bountyId, address indexed sender); // maybe `creator` `operator`
-    event AddFund(uint256 indexed bountyId, address indexed sender, uint256 amount);     // no need, just watch "transfer" of bodhi
-    event Complete(uint256 indexed bountyId, uint256 indexed assetId, address indexed worker, uint256 shareAmount, uint256 ethAmount);
+    event AddFund(uint256 indexed bountyId, address indexed sender, uint256 amount); // no need, just watch "transfer" of bodhi
+    event Complete(
+        uint256 indexed bountyId,
+        uint256 indexed assetId,
+        address indexed worker,
+        uint256 shareAmount,
+        uint256 ethAmount
+    );
 
     struct BountyInfo {
-        address operator;   // does it need an operator since asset already has a creator? The only reason is that it can be set (for like reverse bounty)
+        address operator; // does it need an operator since asset already has a creator? The only reason is that it can be set (for like reverse bounty)
         bool completed;
-        uint256 solutionId;     // be careful when user assign solution to a post created by Space
+        uint256 solutionId; // be careful when user assign solution to a post created by Space
     }
 
     mapping(uint256 => BountyInfo) public bounties; // bountyId => BountyInfo
 
     constructor(address _bodhi) {
-        bodhi = IBodhi(_bodhi);  // use constant
+        bodhi = IBodhi(_bodhi); // use constant
     }
-    
+
     // should it have a initial transfer? guess no
     function create(uint256 assetId) external {
         (,, address creator) = bodhi.assets(assetId);
@@ -37,7 +43,7 @@ contract RegularPool is ERC1155TokenReceiver {
         emit Create(assetId, msg.sender);
     }
 
-    function addFund(uint256 bountyId, uint256 amount) payable external {
+    function addFund(uint256 bountyId, uint256 amount) external payable {
         uint256 price = bodhi.getBuyPriceAfterFee(bountyId, amount);
         require(msg.value >= price, "Not enough fund");
         bodhi.buy{value: price}(bountyId, amount);
@@ -52,7 +58,7 @@ contract RegularPool is ERC1155TokenReceiver {
         require(msg.sender == bounty.operator, "Only operator can complete the bounty");
         require(!bounty.completed, "Bounty already completed");
 
-        (,,address assetCreator) = bodhi.assets(assetId);
+        (,, address assetCreator) = bodhi.assets(assetId);
         require(assetCreator != address(0), "Asset not exist");
         bounty.completed = true;
         bounty.solutionId = assetId;
@@ -61,13 +67,13 @@ contract RegularPool is ERC1155TokenReceiver {
         uint256 supply = bodhi.totalSupply(bountyId);
         uint256 amount = balance + 1 ether > supply ? supply - 1 ether : balance;
         uint256 sellPrice = bodhi.getSellPriceAfterFee(bountyId, amount);
-        
+
         if (amount > 0) {
             bodhi.sell(bountyId, amount);
-            (bool sent, ) = assetCreator.call{value: sellPrice}("");
+            (bool sent,) = assetCreator.call{value: sellPrice}("");
             require(sent, "Failed to send Ether");
         }
-        emit Complete(bountyId, assetId, assetCreator, amount, sellPrice);  // "XXX completed the bounty, and received YYY ETH"
+        emit Complete(bountyId, assetId, assetCreator, amount, sellPrice); // "XXX completed the bounty, and received YYY ETH"
     }
 
     receive() external payable {}

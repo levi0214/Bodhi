@@ -3,8 +3,7 @@
   "author": "Luyao <zhangluyao.levi@gmail.com>",
   "license": "MIT",
   "devDependencies": {
-    "prettier": "^3.3.3",
-    "prettier-plugin-solidity": "^1.4.0"
+    "prettier": "^3.3.3"
   },
   "scripts": {
     "test": "forge test",

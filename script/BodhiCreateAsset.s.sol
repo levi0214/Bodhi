@@ -13,7 +13,7 @@ contract CreateAsset is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         Bodhi bodhi = Bodhi(bodhiAddress);
-        
+
         uint256 assetIndexBefore = bodhi.assetIndex();
         console.log("Asset index before creation:", assetIndexBefore);
 
