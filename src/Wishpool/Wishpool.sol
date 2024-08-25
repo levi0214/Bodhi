@@ -60,3 +60,4 @@ contract Wishpool is ERC1155TokenReceiver {
 // TODO do we need addFund function?
 // TODO in complete, check totalSupply, don't sell below 1 supply
 // TODO in complete, do we need `pools[poolId].solver = solver;`?
+// TODO add another version of wishpool, first create bodhi asset, then put in wishpool
