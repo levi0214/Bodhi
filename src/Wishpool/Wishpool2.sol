@@ -4,8 +4,9 @@ pragma solidity ^0.8.18;
 import {ERC1155TokenReceiver} from "../peripheral/ERC1155TokenReceiver.sol";
 import {IBodhi} from "../interface/IBodhi.sol";
 
-// combined SpecialPool and RegularPool
-contract Wishpool is ERC1155TokenReceiver {
+// new wishpool with solution submit process
+
+contract Wishpool2 is ERC1155TokenReceiver {
     IBodhi public immutable BODHI;
 
     struct Pool {
@@ -14,10 +15,17 @@ contract Wishpool is ERC1155TokenReceiver {
         bool completed;
     }
 
+    struct Solution {
+        string arTxId;
+        address solver;
+    }
+
     mapping(uint256 => Pool) public pools;
+    mapping(uint256 => Solution[]) public poolSolutions;
 
     event Create(uint256 indexed poolId, address indexed creator, address indexed solver);
-    event Complete(uint256 indexed poolId, address indexed solver, uint256 amount);
+    event SubmitSolution(uint256 indexed poolId, address indexed solver, string arTxId);
+    event Complete(uint256 indexed poolId, address indexed solver, uint256 amount); // TODO change
 
     constructor(address _bodhi) {
         BODHI = IBodhi(_bodhi);
@@ -32,17 +40,34 @@ contract Wishpool is ERC1155TokenReceiver {
         BODHI.create(arTxId);
     }
 
-    function complete(uint256 poolId, address solver) external {
+    function submitSolution(uint256 poolId, string calldata arTxId) external {
         Pool memory pool = pools[poolId];
         require(!pool.completed, "Pool already completed");
 
+        if (pool.solver != address(0)) {
+            require(msg.sender == pool.solver, "Only designated solver can submit");
+        }
+
+        poolSolutions[poolId].push(Solution(arTxId, msg.sender));
+        emit SubmitSolution(poolId, msg.sender, arTxId);
+    }
+
+    function complete(uint256 poolId, uint256 solutionIndex) external {
+        Pool memory pool = pools[poolId];
+        require(!pool.completed, "Pool already completed");
+        require(solutionIndex < poolSolutions[poolId].length, "Invalid solution index");
         require(
             (pool.solver == address(0) && msg.sender == pool.creator)
                 || (pool.solver != address(0) && msg.sender == pool.solver),
             "Unauthorized"
         );
 
-        if (pool.solver == address(0)) pool.solver = solver;
+        Solution memory solution = poolSolutions[poolId][solutionIndex];
+        if (pool.solver == address(0)) {
+            pool.solver = solution.solver;
+        } else {
+            require(solution.solver == pool.solver, "Chosen solution must be from designated solver");
+        }
         pools[poolId].completed = true;
 
         uint256 balance = BODHI.balanceOf(address(this), poolId);
@@ -54,10 +79,3 @@ contract Wishpool is ERC1155TokenReceiver {
 
     receive() external payable {}
 }
-
-// TODO handle received fees
-// TODO do we need to combine create & buy together?
-// TODO do we need addFund function?
-// TODO in complete, check totalSupply, don't sell below 1 supply
-// TODO in complete, do we need `pools[poolId].solver = solver;`?
-// TODO add another version of wishpool, first create bodhi asset, then put in wishpool
