@@ -21,7 +21,7 @@ contract Wishpool2 is ERC1155TokenReceiver {
     }
 
     mapping(uint256 => Pool) public pools;
-    mapping(uint256 => Solution[]) public poolSolutions;
+    mapping(uint256 => Solution[]) public solutions;
 
     event Create(uint256 indexed poolId, address indexed creator, address indexed solver);
     event SubmitSolution(uint256 indexed poolId, address indexed solver, string arTxId);
@@ -48,21 +48,21 @@ contract Wishpool2 is ERC1155TokenReceiver {
             require(msg.sender == pool.solver, "Only designated solver can submit");
         }
 
-        poolSolutions[poolId].push(Solution(arTxId, msg.sender));
+        solutions[poolId].push(Solution(arTxId, msg.sender));
         emit SubmitSolution(poolId, msg.sender, arTxId);
     }
 
     function complete(uint256 poolId, uint256 solutionIndex) external {
         Pool memory pool = pools[poolId];
         require(!pool.completed, "Pool already completed");
-        require(solutionIndex < poolSolutions[poolId].length, "Invalid solution index");
+        require(solutionIndex < solutions[poolId].length, "Invalid solution index");
         require(
             (pool.solver == address(0) && msg.sender == pool.creator)
                 || (pool.solver != address(0) && msg.sender == pool.solver),
             "Unauthorized"
         );
 
-        Solution memory solution = poolSolutions[poolId][solutionIndex];
+        Solution memory solution = solutions[poolId][solutionIndex];
         if (pool.solver == address(0)) {
             pool.solver = solution.solver;
         } else {

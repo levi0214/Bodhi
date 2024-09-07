@@ -9,7 +9,7 @@ import {IBodhi} from "../interface/IBodhi.sol";
 // 另一种方案的思考：
 // 对 solution 的存储，可能不是绝对必要的，只是为了方便应用查询
 // 后续可以考虑：
-// 1. 移除 poolSolutions
+// 1. 移除 solutions
 // 2. submitSolution 减少权限检查，不存储，只发 event
 // 3. 完全由 complete 函数检查权限
 // 4. 在 UI 上进行用户友好的显示
@@ -25,7 +25,7 @@ contract Wishpool3 is ERC1155TokenReceiver {
     }
 
     mapping(uint256 => Pool) public pools;
-    mapping(uint256 => uint256[]) public poolSolutions;
+    mapping(uint256 => uint256[]) public solutions;
 
     event Create(uint256 indexed poolId, address indexed creator, address indexed solver);
     event SubmitSolution(uint256 indexed poolId, address indexed solver, uint256 solutionId);
@@ -53,7 +53,7 @@ contract Wishpool3 is ERC1155TokenReceiver {
         require(msg.sender == solutionCreator, "You are not the solution creator");
         require(pool.solver == address(0) || solutionCreator == pool.solver, "Unauthorized");
 
-        poolSolutions[poolId].push(solutionId);
+        solutions[poolId].push(solutionId);
         emit SubmitSolution(poolId, msg.sender, solutionId);
     }
 
@@ -80,8 +80,8 @@ contract Wishpool3 is ERC1155TokenReceiver {
         }
     }
 
-    function getPoolSolutions(uint256 poolId) external view returns (uint256[] memory) {
-        return poolSolutions[poolId];
+    function getSolutions(uint256 poolId) external view returns (uint256[] memory) {
+        return solutions[poolId];
     }
 
     receive() external payable {}
