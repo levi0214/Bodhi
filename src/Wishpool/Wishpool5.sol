@@ -21,7 +21,7 @@ import {IBodhi} from "../interface/IBodhi.sol";
 // 3. replace `require` statements with `if` statements and `revert` statements
 // 4. add error definitions outside the contract
 
-error MissionAlreadyCompleted();
+error InvalidMission();
 error Unauthorized();
 error InvalidSubmission();
 error EtherTransferFailed();
@@ -64,7 +64,7 @@ contract Wishpool5 is ERC1155TokenReceiver {
 
     function createSubmission(uint256 missionId, string calldata arTxId) external {
         Mission memory mission = missions[missionId];
-        if (mission.completed) revert MissionAlreadyCompleted();
+        if (mission.completed || mission.creator == address(0)) revert InvalidMission();
         if (mission.solver != address(0) && msg.sender != mission.solver) revert Unauthorized();
 
         uint256 submissionId = BODHI.assetIndex();
@@ -77,7 +77,7 @@ contract Wishpool5 is ERC1155TokenReceiver {
 
     function completeMission(uint256 missionId, uint256 submissionId) external {
         Mission storage mission = missions[missionId];
-        if (mission.completed) revert MissionAlreadyCompleted();
+        if (mission.completed) revert InvalidMission();
         if (msg.sender != mission.creator && msg.sender != mission.solver) revert Unauthorized();
 
         address submissionCreator = submissionToCreator[submissionId];
