@@ -5,16 +5,26 @@ import {ERC1155TokenReceiver} from "../peripheral/ERC1155TokenReceiver.sol";
 import {IBodhi} from "../interface/IBodhi.sol";
 
 // From Wishpool4 to Wishpool5:
-// - Renamed 'pool' to 'mission'
-// - Renamed 'solution' to 'submission'
-// - Updated all related variable names and function names accordingly
-// - Renamed events and functions as per the latest request
-    // - Renamed Create event to CreateMission
-    // - Renamed SubmitSubmission event to CreateSubmission
-    // - Renamed Complete event to CompleteMission
-    // - Renamed submitSubmission function to createSubmission
-    // - Renamed complete function to completeMission
+// 1. Naming changes:
+    // - Renamed 'pool' to 'mission'
+    // - Renamed 'solution' to 'submission'
+    // - Updated all related variable names and function names accordingly
+    // - Renamed events and functions as per the latest request
+        // - Renamed Create event to CreateMission
+        // - Renamed SubmitSubmission event to CreateSubmission
+        // - Renamed Complete event to CompleteMission
+        // - Renamed submitSubmission function to createSubmission
+        // - Renamed complete function to completeMission
+// 2. submission changes:
+    // - `createSubmission` now takes `arTxId` as argument, instead of `submissionId`
+    // - add `submissionToCreator` mapping to track submission creators
+// 3. replace `require` statements with `if` statements and `revert` statements
+// 4. add error definitions outside the contract
 
+error MissionAlreadyCompleted();
+error Unauthorized();
+error InvalidSubmission();
+error EtherTransferFailed();
 
 contract Wishpool5 is ERC1155TokenReceiver {
     IBodhi public immutable BODHI;
@@ -53,9 +63,9 @@ contract Wishpool5 is ERC1155TokenReceiver {
     }
 
     function createSubmission(uint256 missionId, string calldata arTxId) external {
-        Mission storage mission = missions[missionId];
-        require(!mission.completed, "Mission already completed");
-        require(mission.solver == address(0) || msg.sender == mission.solver, "Unauthorized");
+        Mission memory mission = missions[missionId];
+        if (mission.completed) revert MissionAlreadyCompleted();
+        if (mission.solver != address(0) && msg.sender != mission.solver) revert Unauthorized();
 
         uint256 submissionId = BODHI.assetIndex();
         BODHI.create(arTxId);
@@ -67,16 +77,16 @@ contract Wishpool5 is ERC1155TokenReceiver {
 
     function completeMission(uint256 missionId, uint256 submissionId) external {
         Mission storage mission = missions[missionId];
-        require(!mission.completed, "Mission already completed");
-        require(msg.sender == mission.creator || msg.sender == mission.solver, "Unauthorized");
+        if (mission.completed) revert MissionAlreadyCompleted();
+        if (msg.sender != mission.creator && msg.sender != mission.solver) revert Unauthorized();
 
         address submissionCreator = submissionToCreator[submissionId];
-        require(submissionCreator != address(0) && submissionToMission[submissionId] == missionId, "Invalid submission");
+        if (submissionCreator == address(0) || submissionToMission[submissionId] != missionId) revert InvalidSubmission();
 
         if (mission.solver == address(0)) {
             mission.solver = submissionCreator;
-        } else {
-            require(submissionCreator == mission.solver, "Submission must be from designated solver");
+        } else if (submissionCreator != mission.solver) {
+            revert Unauthorized();
         }
 
         mission.completed = true;
@@ -90,7 +100,7 @@ contract Wishpool5 is ERC1155TokenReceiver {
         if (amount > 0) {
             BODHI.sell(missionId, amount);
             (bool sent,) = mission.solver.call{value: sellPrice}("");
-            require(sent, "Failed to send Ether");
+            if (!sent) revert EtherTransferFailed();
         }
     }
 
