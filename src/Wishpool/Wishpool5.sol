@@ -27,6 +27,7 @@ contract Wishpool5 is ERC1155TokenReceiver {
 
     mapping(uint256 => Mission) public missions;
     mapping(uint256 => uint256) public submissionToMission;
+    mapping(uint256 => address) public submissionToCreator;
 
     event CreateMission(uint256 indexed missionId, address indexed creator, address indexed solver);
     event CreateSubmission(uint256 indexed missionId, address indexed solver, uint256 submissionId);
@@ -51,14 +52,15 @@ contract Wishpool5 is ERC1155TokenReceiver {
         BODHI.create(arTxId);
     }
 
-    function createSubmission(uint256 missionId, uint256 submissionId) external {
+    function createSubmission(uint256 missionId, string calldata arTxId) external {
         Mission storage mission = missions[missionId];
         require(!mission.completed, "Mission already completed");
+        require(mission.solver == address(0) || msg.sender == mission.solver, "Unauthorized");
 
-        (,, address submissionCreator) = BODHI.assets(submissionId);
-        require(submissionCreator != address(0) && msg.sender == submissionCreator, "Invalid submission");
-        require(mission.solver == address(0) || submissionCreator == mission.solver, "Unauthorized");
+        uint256 submissionId = BODHI.assetIndex();
+        BODHI.create(arTxId);
 
+        submissionToCreator[submissionId] = msg.sender;
         submissionToMission[submissionId] = missionId;
         emit CreateSubmission(missionId, msg.sender, submissionId);
     }
@@ -68,7 +70,7 @@ contract Wishpool5 is ERC1155TokenReceiver {
         require(!mission.completed, "Mission already completed");
         require(msg.sender == mission.creator || msg.sender == mission.solver, "Unauthorized");
 
-        (,, address submissionCreator) = BODHI.assets(submissionId);
+        address submissionCreator = submissionToCreator[submissionId];
         require(submissionCreator != address(0) && submissionToMission[submissionId] == missionId, "Invalid submission");
 
         if (mission.solver == address(0)) {
