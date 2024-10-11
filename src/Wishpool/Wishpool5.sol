@@ -33,6 +33,7 @@ contract Wishpool5 is ERC1155TokenReceiver {
         address creator;
         address solver;
         bool completed;
+        uint256 submission; // winning submission (do we really need to record this?)
     }
 
     mapping(uint256 => Mission) public missions;
@@ -57,7 +58,7 @@ contract Wishpool5 is ERC1155TokenReceiver {
     // targeted mission: createMission('', 0x...)
     function createMission(string calldata arTxId, address solver) external {
         uint256 missionId = BODHI.assetIndex();
-        missions[missionId] = Mission(msg.sender, solver, false);
+        missions[missionId] = Mission(msg.sender, solver, false, 0);
         emit CreateMission(missionId, msg.sender, solver);
         BODHI.create(arTxId);
     }
@@ -82,24 +83,20 @@ contract Wishpool5 is ERC1155TokenReceiver {
 
         address submissionCreator = submissionToCreator[submissionId];
         if (submissionCreator == address(0) || submissionToMission[submissionId] != missionId) revert InvalidSubmission();
-
-        if (mission.solver == address(0)) {
-            mission.solver = submissionCreator;
-        } else if (submissionCreator != mission.solver) {
-            revert Unauthorized();
-        }
+        if (mission.solver != address(0) && submissionCreator != mission.solver) revert Unauthorized();
 
         mission.completed = true;
+        mission.submission = submissionId;
 
         uint256 balance = BODHI.balanceOf(address(this), missionId);
         uint256 supply = BODHI.totalSupply(missionId);
         uint256 amount = balance + 1 ether > supply ? supply - 1 ether : balance;
         uint256 sellPrice = BODHI.getSellPriceAfterFee(missionId, amount);
 
-        emit CompleteMission(missionId, mission.solver, submissionId, amount, sellPrice);
+        emit CompleteMission(missionId, submissionCreator, submissionId, amount, sellPrice);
         if (amount > 0) {
             BODHI.sell(missionId, amount);
-            (bool sent,) = mission.solver.call{value: sellPrice}("");
+            (bool sent,) = submissionCreator.call{value: sellPrice}("");
             if (!sent) revert EtherTransferFailed();
         }
     }

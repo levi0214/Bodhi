@@ -48,10 +48,11 @@ contract Wishpool5Test is Test, ERC1155TokenReceiver {
         vm.prank(alice);
         wishpool.createMission("newMissionTxId", address(0));
 
-        (address creator, address solver, bool completed) = wishpool.missions(newMissionId);
+        (address creator, address solver, bool completed, uint256 submission) = wishpool.missions(newMissionId);
         assertEq(creator, alice);
         assertEq(solver, address(0));
         assertFalse(completed);
+        assertEq(submission, 0);
     }
 
     // ==================== Create Submission Tests ====================
@@ -65,7 +66,7 @@ contract Wishpool5Test is Test, ERC1155TokenReceiver {
 
         assertEq(wishpool.submissionToMission(submissionId), openMissionId);
         assertEq(wishpool.submissionToCreator(submissionId), bob);
-        (,, bool completed) = wishpool.missions(openMissionId);
+        (,, bool completed,) = wishpool.missions(openMissionId);
         assertFalse(completed);
     }
 
@@ -78,7 +79,7 @@ contract Wishpool5Test is Test, ERC1155TokenReceiver {
 
         assertEq(wishpool.submissionToMission(submissionId), targetedMissionId);
         assertEq(wishpool.submissionToCreator(submissionId), bob);
-        (,, bool completed) = wishpool.missions(targetedMissionId);
+        (,, bool completed,) = wishpool.missions(targetedMissionId);
         assertFalse(completed);
     }
 
@@ -149,7 +150,7 @@ contract Wishpool5Test is Test, ERC1155TokenReceiver {
         vm.prank(alice);
         wishpool.completeMission(openMissionId, submissionId);
 
-        _assertMissionCompleted(openMissionId, bob, expectedEthAmount, bobBalanceBefore);
+        _assertMissionCompleted(openMissionId, bob, expectedEthAmount, bobBalanceBefore, submissionId);
     }
 
     function test_CompleteMissionTargetedMission() public {
@@ -171,7 +172,7 @@ contract Wishpool5Test is Test, ERC1155TokenReceiver {
         vm.prank(bob);
         wishpool.completeMission(targetedMissionId, submissionId);
 
-        _assertMissionCompleted(targetedMissionId, bob, expectedEthAmount, bobBalanceBefore);
+        _assertMissionCompleted(targetedMissionId, bob, expectedEthAmount, bobBalanceBefore, submissionId);
     }
 
     function test_CompleteMissionWithNoFunds() public {
@@ -184,8 +185,9 @@ contract Wishpool5Test is Test, ERC1155TokenReceiver {
         vm.prank(alice);
         wishpool.completeMission(openMissionId, submissionId);
 
-        (,, bool completed) = wishpool.missions(openMissionId);
+        (,, bool completed, uint256 winningSubmission) = wishpool.missions(openMissionId);
         assertTrue(completed);
+        assertEq(winningSubmission, submissionId);
         assertEq(bob.balance, bobBalanceBefore, "Bob's balance should not change when there are no funds");
     }
 
@@ -258,9 +260,10 @@ contract Wishpool5Test is Test, ERC1155TokenReceiver {
         vm.stopPrank();
     }
 
-    function _assertMissionCompleted(uint256 missionId, address solver, uint256 expectedEthAmount, uint256 solverBalanceBefore) internal view {
-        (,, bool completed) = wishpool.missions(missionId);
+    function _assertMissionCompleted(uint256 missionId, address solver, uint256 expectedEthAmount, uint256 solverBalanceBefore, uint256 expectedSubmissionId) internal view {
+        (,, bool completed, uint256 winningSubmission) = wishpool.missions(missionId);
         assertTrue(completed, "Mission should be marked as completed");
+        assertEq(winningSubmission, expectedSubmissionId, "Winning submission should be recorded");
         assertEq(solver.balance, solverBalanceBefore + expectedEthAmount, "Solver should receive the expected ETH amount");
     }
 }
