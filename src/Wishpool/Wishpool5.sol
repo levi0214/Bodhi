@@ -4,28 +4,46 @@ pragma solidity ^0.8.18;
 import {ERC1155TokenReceiver} from "../peripheral/ERC1155TokenReceiver.sol";
 import {IBodhi} from "../interface/IBodhi.sol";
 
-// From Wishpool4 to Wishpool5:
-// 1. Naming changes:
-    // - Renamed 'pool' to 'mission'
-    // - Renamed 'solution' to 'submission'
-    // - Updated all related variable names and function names accordingly
-    // - Renamed events and functions as per the latest request
-        // - Renamed Create event to CreateMission
-        // - Renamed SubmitSubmission event to CreateSubmission
-        // - Renamed Complete event to CompleteMission
-        // - Renamed submitSubmission function to createSubmission
-        // - Renamed complete function to completeMission
-// 2. submission changes:
-    // - `createSubmission` now takes `arTxId` as argument, instead of `submissionId`
-    // - add `submissionToCreator` mapping to track submission creators
-// 3. replace `require` statements with `if` statements and `revert` statements
-// 4. add error definitions outside the contract
+// Changelog: Wishpool4 to Wishpool5
 
-// On Security:
-// Note: 
-//  - Since all assets are created by the contract, there's likely no risk from the Bodhi asset creator.
-// TODO: 
-//  - Check security risks when distributing rewards
+// 1. Terminology Changes:
+//    - 'pool' renamed to 'mission'
+//    - 'solution' renamed to 'submission'
+
+// 2. Function, Event, and Interface Renaming:
+//    - Create event -> CreateMission
+//    - SubmitSubmission event -> CreateSubmission
+//    - Complete event -> CompleteMission
+//    - submitSubmission function -> createSubmission
+//    - complete function -> completeMission
+//    - pools mapping -> missions mapping
+//    - solutionToPool mapping -> submissionToMission mapping
+
+// 3. Struct Updates:
+//    - Mission struct: Added 'submission' field to store winning submission ID
+
+// 4. Mapping Changes:
+//    - Added 'submissionToCreator' mapping to track submission creators
+
+// 5. Error Handling:
+//    - Replaced 'require' statements with 'if' statements and 'revert' statements
+//    - Added error definitions outside the contract
+
+// 6. Function Updates:
+//    a. createSubmission:
+//       - Now takes 'arTxId' as argument instead of 'submissionId'
+//       - Moved BODHI.create() call to the end of the function
+//    b. completeMission:
+//       - Simplified solver check logic
+//       - Stores winning submission ID in Mission struct
+//       - No longer stores solver in mission struct
+
+// 7. General:
+//    - Updated all related variable names and function names to reflect terminology changes
+
+// On Security
+// 1. Since all assets are created by the contract, there's likely no risk from the Bodhi asset creator.
+// 2. Check security risks when distributing rewards
 
 error InvalidMission();
 error Unauthorized();
@@ -38,7 +56,7 @@ contract Wishpool5 is ERC1155TokenReceiver {
     struct Mission {
         address creator;
         address solver;
-        bool completed;
+        bool completed; // is it still necessary since we already have winning submission?
         uint256 submission; // winning submission (do we really need to record this?)
     }
 
