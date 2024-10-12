@@ -21,6 +21,12 @@ import {IBodhi} from "../interface/IBodhi.sol";
 // 3. replace `require` statements with `if` statements and `revert` statements
 // 4. add error definitions outside the contract
 
+// On Security:
+// Note: 
+//  - Since all assets are created by the contract, there's likely no risk from the Bodhi asset creator.
+// TODO: 
+//  - Check security risks when distributing rewards
+
 error InvalidMission();
 error Unauthorized();
 error InvalidSubmission();
@@ -69,11 +75,11 @@ contract Wishpool5 is ERC1155TokenReceiver {
         if (mission.solver != address(0) && msg.sender != mission.solver) revert Unauthorized();
 
         uint256 submissionId = BODHI.assetIndex();
-        BODHI.create(arTxId);
-
         submissionToCreator[submissionId] = msg.sender;
         submissionToMission[submissionId] = missionId;
+        
         emit CreateSubmission(missionId, msg.sender, submissionId);
+        BODHI.create(arTxId);
     }
 
     function completeMission(uint256 missionId, uint256 submissionId) external {
