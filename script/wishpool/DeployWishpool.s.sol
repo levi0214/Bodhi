@@ -2,7 +2,7 @@
 pragma solidity ^0.8.18;
 
 import "forge-std/Script.sol";
-import {Wishpool5} from "../../src/Wishpool/Wishpool5.sol";
+import {Wishpool6} from "../../src/Wishpool/Wishpool6.sol";
 
 contract DeployWishpool is Script {
     function run() external {
@@ -12,7 +12,7 @@ contract DeployWishpool is Script {
         vm.startBroadcast(deployerPrivateKey);
         
         // deploy
-        Wishpool5 wishpool = new Wishpool5(bodhiAddress);
+        Wishpool6 wishpool = new Wishpool6(bodhiAddress);
         console.log("Wishpool deployed at:", address(wishpool));
 
         // deployment check
