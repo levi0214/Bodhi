@@ -6,6 +6,7 @@ import "../../src/Wishpool/Wishpool7.sol";
 import {Bodhi} from "../../src/Bodhi.sol";
 import {ERC1155TokenReceiver} from "../../src/peripheral/ERC1155TokenReceiver.sol";
 
+/// @notice Test suite for Wishpool7 contract
 contract Wishpool7Test is Test, ERC1155TokenReceiver {
     Wishpool7 public wishpool;
     Bodhi public bodhi;
@@ -37,8 +38,9 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         (openWishId, targetedWishId) = _createTestWishes();
     }
 
-    // ==================== Create Wish Tests ====================
+    // ==================== Basic Function Tests ====================
 
+    /// @notice Verify wish creation with correct creator and solver assignment
     function test_CreateWish() public {
         uint256 newWishId = bodhi.assetIndex();
         vm.expectEmit(true, true, true, true);
@@ -52,8 +54,7 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         assertEq(solver, address(0));
     }
 
-    // ==================== Create Response Tests ====================
-
+    /// @notice Verify anyone can respond to an open wish
     function test_CreateResponseOpenWish() public {
         uint256 responseId = bodhi.assetIndex();
         vm.expectEmit(true, true, true, true);
@@ -68,6 +69,7 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         assertFalse(isRewarded);
     }
 
+    /// @notice Verify only designated solver can respond to targeted wish
     function test_CreateResponseTargetedWish() public {
         uint256 responseId = bodhi.assetIndex();
         vm.expectEmit(true, true, true, true);
@@ -82,11 +84,13 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         assertFalse(isRewarded);
     }
 
+    /// @notice Verify unauthorized users cannot respond to targeted wish
     function testFail_CreateResponseTargetedWishUnauthorized() public {
         vm.prank(charlie);
         wishpool.createResponse(targetedWishId, "responseTxId");
     }
 
+    /// @notice Verify responses to non-existent wishes are rejected
     function testFail_CreateResponseForNonExistentWish() public {
         uint256 nonExistentWishId = 9999;
         vm.prank(bob);
@@ -95,6 +99,7 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
 
     // ==================== Reward Tests ====================
 
+    /// @notice Verify basic reward functionality
     function test_RewardResponse() public {
         uint256 fundAmount = 1 ether;
         _addFundsToWish(alice, openWishId, fundAmount);
@@ -116,11 +121,12 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
     }
 
+    /// @notice Verify multiple responses can be rewarded for same wish
     function test_RewardMultipleResponses() public {
         uint256 fundAmount = 2 ether;
         _addFundsToWish(alice, openWishId, fundAmount);
 
-        // Create two responses
+        // Setup responses
         uint256 responseId1 = bodhi.assetIndex();
         vm.prank(bob);
         wishpool.createResponse(openWishId, "responseTxId1");
@@ -130,28 +136,25 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         wishpool.createResponse(openWishId, "responseTxId2");
 
         uint256 rewardAmount = 1 ether;
-        
-        // 记录初始余额
         uint256 bobBalanceBefore = bob.balance;
         uint256 charlieBalanceBefore = charlie.balance;
 
+        // First reward
         vm.startPrank(alice);
-        
-        // 第一次奖励
         uint256 expectedEthAmount1 = bodhi.getSellPriceAfterFee(openWishId, rewardAmount);
         wishpool.reward(openWishId, responseId1, rewardAmount);
         
-        // 第二次奖励 - 需要重新计算预期金额，因为池子中的代币数量已经改变
+        // Second reward - recalculate price due to pool changes
         uint256 expectedEthAmount2 = bodhi.getSellPriceAfterFee(openWishId, rewardAmount);
         wishpool.reward(openWishId, responseId2, rewardAmount);
-        
         vm.stopPrank();
 
-        // 分别验证两次奖励
+        // Verify both rewards
         _assertResponseRewarded(responseId1, bob, expectedEthAmount1, bobBalanceBefore);
         _assertResponseRewarded(responseId2, charlie, expectedEthAmount2, charlieBalanceBefore);
     }
 
+    /// @notice Verify rewards with specific token amount
     function test_RewardWithSpecificAmount() public {
         uint256 fundAmount = 2 ether;
         _addFundsToWish(alice, openWishId, fundAmount);
@@ -170,6 +173,65 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
     }
 
+    // ==================== Security Tests ====================
+
+    /// @notice Verify auto-calculation of reward amount when amount is zero
+    function test_RewardWithZeroAmount() public {
+        uint256 fundAmount = 1 ether;
+        _addFundsToWish(alice, openWishId, fundAmount);
+
+        uint256 responseId = bodhi.assetIndex();
+        vm.prank(bob);
+        wishpool.createResponse(openWishId, "responseTxId");
+
+        uint256 bobBalanceBefore = bob.balance;
+        uint256 expectedAmount = fundAmount;
+        uint256 expectedEthAmount = bodhi.getSellPriceAfterFee(openWishId, expectedAmount);
+
+        vm.prank(alice);
+        wishpool.reward(openWishId, responseId, 0);
+
+        _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
+    }
+
+    /// @notice Verify excessive reward amounts are rejected
+    function test_RewardWithExcessiveAmount() public {
+        uint256 fundAmount = 1 ether;
+        _addFundsToWish(alice, openWishId, fundAmount);
+
+        uint256 responseId = bodhi.assetIndex();
+        vm.prank(bob);
+        wishpool.createResponse(openWishId, "responseTxId");
+
+        vm.prank(alice);
+        vm.expectRevert();
+        wishpool.reward(openWishId, responseId, 2 ether);
+    }
+
+    /// @notice Verify rewards work correctly after direct token transfers
+    function test_RewardAfterTokenTransfer() public {
+        uint256 fundAmount = 1 ether;
+        _addFundsToWish(alice, openWishId, fundAmount);
+        
+        // Additional direct token transfer
+        uint256 extraAmount = 0.5 ether;
+        _addFundsToWish(charlie, openWishId, extraAmount);
+
+        uint256 responseId = bodhi.assetIndex();
+        vm.prank(bob);
+        wishpool.createResponse(openWishId, "responseTxId");
+
+        uint256 bobBalanceBefore = bob.balance;
+        uint256 totalAmount = fundAmount + extraAmount;
+        uint256 expectedEthAmount = bodhi.getSellPriceAfterFee(openWishId, totalAmount);
+
+        vm.prank(alice);
+        wishpool.reward(openWishId, responseId, 0);
+
+        _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
+    }
+
+    /// @notice Verify a response cannot be rewarded twice
     function testFail_RewardResponseTwice() public {
         uint256 responseId = bodhi.assetIndex();
         vm.prank(bob);
@@ -181,6 +243,7 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         vm.stopPrank();
     }
 
+    /// @notice Verify only authorized users can reward responses
     function testFail_RewardUnauthorized() public {
         uint256 responseId = bodhi.assetIndex();
         vm.prank(bob);
@@ -190,13 +253,85 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         wishpool.reward(openWishId, responseId, 0);
     }
 
+    /// @notice Verify invalid response IDs are rejected
     function testFail_RewardInvalidResponse() public {
         vm.prank(alice);
         wishpool.reward(openWishId, 999, 0);
     }
 
+    /// @notice Verify minimum reward amount (1 wei) works correctly
+    function test_RewardWithMinimumAmount() public {
+        uint256 fundAmount = 1 ether;
+        _addFundsToWish(alice, openWishId, fundAmount);
+
+        uint256 responseId = bodhi.assetIndex();
+        vm.prank(bob);
+        wishpool.createResponse(openWishId, "responseTxId");
+
+        uint256 minAmount = 1; // 1 wei
+        uint256 bobBalanceBefore = bob.balance;
+        uint256 expectedEthAmount = bodhi.getSellPriceAfterFee(openWishId, minAmount);
+
+        vm.prank(alice);
+        wishpool.reward(openWishId, responseId, minAmount);
+
+        _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
+    }
+
+    /// @notice Verify rewards work correctly after market price changes
+    function test_RewardAfterMarketPriceChange() public {
+        uint256 fundAmount = 1 ether;
+        _addFundsToWish(alice, openWishId, fundAmount);
+
+        // Simulate market activity to change price
+        _simulateMarketActivity(openWishId);
+
+        uint256 responseId = bodhi.assetIndex();
+        vm.prank(bob);
+        wishpool.createResponse(openWishId, "responseTxId");
+
+        uint256 rewardAmount = 0.5 ether;
+        uint256 bobBalanceBefore = bob.balance;
+        uint256 expectedEthAmount = bodhi.getSellPriceAfterFee(openWishId, rewardAmount);
+
+        vm.prank(alice);
+        wishpool.reward(openWishId, responseId, rewardAmount);
+
+        _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
+    }
+
+    /// @notice Verify correct handling of multiple token types
+    function test_RewardWithMultipleTokenTypes() public {
+        uint256 fundAmount = 1 ether;
+        uint256 premintAmount = 1 ether; // Creator premint amount
+        
+        _addFundsToWish(alice, openWishId, fundAmount);
+        uint256 otherWishId = _createOtherWish();
+        _addFundsToWish(alice, otherWishId, fundAmount);
+
+        uint256 responseId = bodhi.assetIndex();
+        vm.prank(bob);
+        wishpool.createResponse(openWishId, "responseTxId");
+
+        uint256 bobBalanceBefore = bob.balance;
+        uint256 totalAmount = fundAmount + premintAmount;
+        uint256 expectedEthAmount = bodhi.getSellPriceAfterFee(openWishId, totalAmount);
+
+        vm.prank(alice);
+        wishpool.reward(openWishId, responseId, 0); // Use 0 to reward all available tokens
+
+        _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
+        
+        assertEq(
+            bodhi.balanceOf(address(wishpool), otherWishId), 
+            fundAmount + premintAmount,
+            "Other wish token balance should include premint amount"
+        );
+    }
+
     // ==================== Helper Functions ====================
 
+    /// @notice Creates test wishes for setup
     function _createTestWishes() internal returns (uint256, uint256) {
         vm.startPrank(alice);
         
@@ -212,14 +347,23 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         return (_openWishId, _targetedWishId);
     }
 
+    /// @notice Adds funds to a wish
+    /// @param funder Address providing the funds
+    /// @param wishId Target wish ID
+    /// @param fundAmount Amount of tokens to fund
     function _addFundsToWish(address funder, uint256 wishId, uint256 fundAmount) internal {
-        vm.startPrank(funder);
+        // Transfer ETH to wishpool
+        vm.prank(funder);
         uint256 buyPrice = bodhi.getBuyPriceAfterFee(wishId, fundAmount);
+        (bool success, ) = address(wishpool).call{value: buyPrice}("");
+        require(success, "ETH transfer failed");
+        
+        // Buy tokens directly from wishpool
+        vm.prank(address(wishpool));
         bodhi.buy{value: buyPrice}(wishId, fundAmount);
-        bodhi.safeTransferFrom(funder, address(wishpool), wishId, fundAmount, "");
-        vm.stopPrank();
     }
 
+    /// @notice Verifies reward state and balances
     function _assertResponseRewarded(
         uint256 responseId,
         address solver,
@@ -233,5 +377,23 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
             solverBalanceBefore + expectedEthAmount,
             "Solver should receive the expected ETH amount"
         );
+    }
+
+    /// @notice Simulates market activity to change token price
+    function _simulateMarketActivity(uint256 wishId) internal {
+        // Simulate market activity by other users
+        vm.startPrank(charlie);
+        uint256 tradeAmount = 0.1 ether;
+        uint256 buyPrice = bodhi.getBuyPriceAfterFee(wishId, tradeAmount);
+        bodhi.buy{value: buyPrice}(wishId, tradeAmount);
+        bodhi.sell(wishId, tradeAmount);
+        vm.stopPrank();
+    }
+
+    /// @notice Creates additional wish for multi-token tests
+    function _createOtherWish() internal returns (uint256) {
+        vm.prank(alice);
+        wishpool.createWish("otherWishTxId", address(0));
+        return bodhi.assetIndex() - 1;
     }
 }
