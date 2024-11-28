@@ -20,11 +20,11 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
     uint256 public constant INITIAL_BALANCE = 100 ether;
 
     event CreateWish(uint256 indexed wishId, address indexed creator, address indexed solver);
-    event CreateResponse(uint256 indexed wishId, address indexed solver, uint256 responseId);
+    event Submit(uint256 indexed wishId, address indexed solver, uint256 submissionId);
     event Reward(
         uint256 indexed wishId,
         address indexed solver,
-        uint256 indexed responseId,
+        uint256 indexed submissionId,
         uint256 tokenAmount,
         uint256 ethAmount
     );
@@ -54,86 +54,86 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         assertEq(solver, address(0));
     }
 
-    /// @notice Verify anyone can respond to an open wish
-    function test_CreateResponseOpenWish() public {
-        uint256 responseId = bodhi.assetIndex();
+    /// @notice Verify anyone can submit to an open wish
+    function test_SubmitToOpenWish() public {
+        uint256 submissionId = bodhi.assetIndex();
         vm.expectEmit(true, true, true, true);
-        emit CreateResponse(openWishId, bob, responseId);
+        emit Submit(openWishId, bob, submissionId);
         
         vm.prank(bob);
-        wishpool.createResponse(openWishId, "responseTxId");
+        wishpool.submit(openWishId, "submissionTxId");
 
-        (address creator, uint256 wishId, bool isRewarded) = wishpool.responses(responseId);
+        (address creator, uint256 wishId, bool isRewarded) = wishpool.submissions(submissionId);
         assertEq(creator, bob);
         assertEq(wishId, openWishId);
         assertFalse(isRewarded);
     }
 
-    /// @notice Verify only designated solver can respond to targeted wish
-    function test_CreateResponseTargetedWish() public {
-        uint256 responseId = bodhi.assetIndex();
+    /// @notice Verify only designated solver can submit to targeted wish
+    function test_SubmitToTargetedWish() public {
+        uint256 submissionId = bodhi.assetIndex();
         vm.expectEmit(true, true, true, true);
-        emit CreateResponse(targetedWishId, bob, responseId);
+        emit Submit(targetedWishId, bob, submissionId);
         
         vm.prank(bob);
-        wishpool.createResponse(targetedWishId, "responseTxId");
+        wishpool.submit(targetedWishId, "submissionTxId");
 
-        (address creator, uint256 wishId, bool isRewarded) = wishpool.responses(responseId);
+        (address creator, uint256 wishId, bool isRewarded) = wishpool.submissions(submissionId);
         assertEq(creator, bob);
         assertEq(wishId, targetedWishId);
         assertFalse(isRewarded);
     }
 
-    /// @notice Verify unauthorized users cannot respond to targeted wish
-    function testFail_CreateResponseTargetedWishUnauthorized() public {
+    /// @notice Verify unauthorized users cannot submit to targeted wish
+    function testFail_SubmitToTargetedWishUnauthorized() public {
         vm.prank(charlie);
-        wishpool.createResponse(targetedWishId, "responseTxId");
+        wishpool.submit(targetedWishId, "submissionTxId");
     }
 
-    /// @notice Verify responses to non-existent wishes are rejected
-    function testFail_CreateResponseForNonExistentWish() public {
+    /// @notice Verify submissions to non-existent wishes are rejected
+    function testFail_SubmitToNonExistentWish() public {
         uint256 nonExistentWishId = 9999;
         vm.prank(bob);
-        wishpool.createResponse(nonExistentWishId, "responseTxId");
+        wishpool.submit(nonExistentWishId, "submissionTxId");
     }
 
     // ==================== Reward Tests ====================
 
     /// @notice Verify basic reward functionality
-    function test_RewardResponse() public {
+    function test_RewardSubmission() public {
         uint256 fundAmount = 1 ether;
         _addFundsToWish(alice, openWishId, fundAmount);
 
-        uint256 responseId = bodhi.assetIndex();
+        uint256 submissionId = bodhi.assetIndex();
         vm.prank(bob);
-        wishpool.createResponse(openWishId, "responseTxId");
+        wishpool.submit(openWishId, "submissionTxId");
 
         uint256 expectedTokenAmount = fundAmount;
         uint256 expectedEthAmount = bodhi.getSellPriceAfterFee(openWishId, expectedTokenAmount);
         uint256 bobBalanceBefore = bob.balance;
 
         vm.expectEmit(true, true, true, true);
-        emit Reward(openWishId, bob, responseId, expectedTokenAmount, expectedEthAmount);
+        emit Reward(openWishId, bob, submissionId, expectedTokenAmount, expectedEthAmount);
 
         vm.prank(alice);
-        wishpool.reward(openWishId, responseId, 0);
+        wishpool.reward(openWishId, submissionId, 0);
 
-        _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
+        _assertSubmissionRewarded(submissionId, bob, expectedEthAmount, bobBalanceBefore);
     }
 
     /// @notice Verify multiple responses can be rewarded for same wish
-    function test_RewardMultipleResponses() public {
+    function test_RewardMultipleSubmissions() public {
         uint256 fundAmount = 2 ether;
         _addFundsToWish(alice, openWishId, fundAmount);
 
         // Setup responses
-        uint256 responseId1 = bodhi.assetIndex();
+        uint256 submissionId1 = bodhi.assetIndex();
         vm.prank(bob);
-        wishpool.createResponse(openWishId, "responseTxId1");
+        wishpool.submit(openWishId, "submissionTxId1");
 
-        uint256 responseId2 = bodhi.assetIndex();
+        uint256 submissionId2 = bodhi.assetIndex();
         vm.prank(charlie);
-        wishpool.createResponse(openWishId, "responseTxId2");
+        wishpool.submit(openWishId, "submissionTxId2");
 
         uint256 rewardAmount = 1 ether;
         uint256 bobBalanceBefore = bob.balance;
@@ -142,16 +142,16 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         // First reward
         vm.startPrank(alice);
         uint256 expectedEthAmount1 = bodhi.getSellPriceAfterFee(openWishId, rewardAmount);
-        wishpool.reward(openWishId, responseId1, rewardAmount);
+        wishpool.reward(openWishId, submissionId1, rewardAmount);
         
         // Second reward - recalculate price due to pool changes
         uint256 expectedEthAmount2 = bodhi.getSellPriceAfterFee(openWishId, rewardAmount);
-        wishpool.reward(openWishId, responseId2, rewardAmount);
+        wishpool.reward(openWishId, submissionId2, rewardAmount);
         vm.stopPrank();
 
         // Verify both rewards
-        _assertResponseRewarded(responseId1, bob, expectedEthAmount1, bobBalanceBefore);
-        _assertResponseRewarded(responseId2, charlie, expectedEthAmount2, charlieBalanceBefore);
+        _assertSubmissionRewarded(submissionId1, bob, expectedEthAmount1, bobBalanceBefore);
+        _assertSubmissionRewarded(submissionId2, charlie, expectedEthAmount2, charlieBalanceBefore);
     }
 
     /// @notice Verify rewards with specific token amount
@@ -159,18 +159,18 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         uint256 fundAmount = 2 ether;
         _addFundsToWish(alice, openWishId, fundAmount);
 
-        uint256 responseId = bodhi.assetIndex();
+        uint256 submissionId = bodhi.assetIndex();
         vm.prank(bob);
-        wishpool.createResponse(openWishId, "responseTxId");
+        wishpool.submit(openWishId, "submissionTxId");
 
         uint256 specifiedAmount = 0.5 ether;
         uint256 expectedEthAmount = bodhi.getSellPriceAfterFee(openWishId, specifiedAmount);
         uint256 bobBalanceBefore = bob.balance;
 
         vm.prank(alice);
-        wishpool.reward(openWishId, responseId, specifiedAmount);
+        wishpool.reward(openWishId, submissionId, specifiedAmount);
 
-        _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
+        _assertSubmissionRewarded(submissionId, bob, expectedEthAmount, bobBalanceBefore);
     }
 
     // ==================== Security Tests ====================
@@ -180,18 +180,18 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         uint256 fundAmount = 1 ether;
         _addFundsToWish(alice, openWishId, fundAmount);
 
-        uint256 responseId = bodhi.assetIndex();
+        uint256 submissionId = bodhi.assetIndex();
         vm.prank(bob);
-        wishpool.createResponse(openWishId, "responseTxId");
+        wishpool.submit(openWishId, "submissionTxId");
 
         uint256 bobBalanceBefore = bob.balance;
         uint256 expectedAmount = fundAmount;
         uint256 expectedEthAmount = bodhi.getSellPriceAfterFee(openWishId, expectedAmount);
 
         vm.prank(alice);
-        wishpool.reward(openWishId, responseId, 0);
+        wishpool.reward(openWishId, submissionId, 0);
 
-        _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
+        _assertSubmissionRewarded(submissionId, bob, expectedEthAmount, bobBalanceBefore);
     }
 
     /// @notice Verify excessive reward amounts are rejected
@@ -199,13 +199,13 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         uint256 fundAmount = 1 ether;
         _addFundsToWish(alice, openWishId, fundAmount);
 
-        uint256 responseId = bodhi.assetIndex();
+        uint256 submissionId = bodhi.assetIndex();
         vm.prank(bob);
-        wishpool.createResponse(openWishId, "responseTxId");
+        wishpool.submit(openWishId, "submissionTxId");
 
         vm.prank(alice);
         vm.expectRevert();
-        wishpool.reward(openWishId, responseId, 2 ether);
+        wishpool.reward(openWishId, submissionId, 2 ether);
     }
 
     /// @notice Verify rewards work correctly after direct token transfers
@@ -217,44 +217,44 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         uint256 extraAmount = 0.5 ether;
         _addFundsToWish(charlie, openWishId, extraAmount);
 
-        uint256 responseId = bodhi.assetIndex();
+        uint256 submissionId = bodhi.assetIndex();
         vm.prank(bob);
-        wishpool.createResponse(openWishId, "responseTxId");
+        wishpool.submit(openWishId, "submissionTxId");
 
         uint256 bobBalanceBefore = bob.balance;
         uint256 totalAmount = fundAmount + extraAmount;
         uint256 expectedEthAmount = bodhi.getSellPriceAfterFee(openWishId, totalAmount);
 
         vm.prank(alice);
-        wishpool.reward(openWishId, responseId, 0);
+        wishpool.reward(openWishId, submissionId, 0);
 
-        _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
+        _assertSubmissionRewarded(submissionId, bob, expectedEthAmount, bobBalanceBefore);
     }
 
-    /// @notice Verify a response cannot be rewarded twice
-    function testFail_RewardResponseTwice() public {
-        uint256 responseId = bodhi.assetIndex();
+    /// @notice Verify a submission cannot be rewarded twice
+    function testFail_RewardSubmissionTwice() public {
+        uint256 submissionId = bodhi.assetIndex();
         vm.prank(bob);
-        wishpool.createResponse(openWishId, "responseTxId");
+        wishpool.submit(openWishId, "submissionTxId");
 
         vm.startPrank(alice);
-        wishpool.reward(openWishId, responseId, 0);
-        wishpool.reward(openWishId, responseId, 0);
+        wishpool.reward(openWishId, submissionId, 0);
+        wishpool.reward(openWishId, submissionId, 0);
         vm.stopPrank();
     }
 
-    /// @notice Verify only authorized users can reward responses
+    /// @notice Verify only authorized users can reward submissions
     function testFail_RewardUnauthorized() public {
-        uint256 responseId = bodhi.assetIndex();
+        uint256 submissionId = bodhi.assetIndex();
         vm.prank(bob);
-        wishpool.createResponse(openWishId, "responseTxId");
+        wishpool.submit(openWishId, "submissionTxId");
 
         vm.prank(charlie);
-        wishpool.reward(openWishId, responseId, 0);
+        wishpool.reward(openWishId, submissionId, 0);
     }
 
-    /// @notice Verify invalid response IDs are rejected
-    function testFail_RewardInvalidResponse() public {
+    /// @notice Verify invalid submission IDs are rejected
+    function testFail_RewardInvalidSubmission() public {
         vm.prank(alice);
         wishpool.reward(openWishId, 999, 0);
     }
@@ -264,18 +264,18 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         uint256 fundAmount = 1 ether;
         _addFundsToWish(alice, openWishId, fundAmount);
 
-        uint256 responseId = bodhi.assetIndex();
+        uint256 submissionId = bodhi.assetIndex();
         vm.prank(bob);
-        wishpool.createResponse(openWishId, "responseTxId");
+        wishpool.submit(openWishId, "submissionTxId");
 
         uint256 minAmount = 1; // 1 wei
         uint256 bobBalanceBefore = bob.balance;
         uint256 expectedEthAmount = bodhi.getSellPriceAfterFee(openWishId, minAmount);
 
         vm.prank(alice);
-        wishpool.reward(openWishId, responseId, minAmount);
+        wishpool.reward(openWishId, submissionId, minAmount);
 
-        _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
+        _assertSubmissionRewarded(submissionId, bob, expectedEthAmount, bobBalanceBefore);
     }
 
     /// @notice Verify rewards work correctly after market price changes
@@ -286,18 +286,18 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         // Simulate market activity to change price
         _simulateMarketActivity(openWishId);
 
-        uint256 responseId = bodhi.assetIndex();
+        uint256 submissionId = bodhi.assetIndex();
         vm.prank(bob);
-        wishpool.createResponse(openWishId, "responseTxId");
+        wishpool.submit(openWishId, "submissionTxId");
 
         uint256 rewardAmount = 0.5 ether;
         uint256 bobBalanceBefore = bob.balance;
         uint256 expectedEthAmount = bodhi.getSellPriceAfterFee(openWishId, rewardAmount);
 
         vm.prank(alice);
-        wishpool.reward(openWishId, responseId, rewardAmount);
+        wishpool.reward(openWishId, submissionId, rewardAmount);
 
-        _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
+        _assertSubmissionRewarded(submissionId, bob, expectedEthAmount, bobBalanceBefore);
     }
 
     /// @notice Verify correct handling of multiple token types
@@ -309,18 +309,18 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
         uint256 otherWishId = _createOtherWish();
         _addFundsToWish(alice, otherWishId, fundAmount);
 
-        uint256 responseId = bodhi.assetIndex();
+        uint256 submissionId = bodhi.assetIndex();
         vm.prank(bob);
-        wishpool.createResponse(openWishId, "responseTxId");
+        wishpool.submit(openWishId, "submissionTxId");
 
         uint256 bobBalanceBefore = bob.balance;
         uint256 totalAmount = fundAmount + premintAmount;
         uint256 expectedEthAmount = bodhi.getSellPriceAfterFee(openWishId, totalAmount);
 
         vm.prank(alice);
-        wishpool.reward(openWishId, responseId, 0); // Use 0 to reward all available tokens
+        wishpool.reward(openWishId, submissionId, 0); // Use 0 to reward all available tokens
 
-        _assertResponseRewarded(responseId, bob, expectedEthAmount, bobBalanceBefore);
+        _assertSubmissionRewarded(submissionId, bob, expectedEthAmount, bobBalanceBefore);
         
         assertEq(
             bodhi.balanceOf(address(wishpool), otherWishId), 
@@ -364,14 +364,14 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
     }
 
     /// @notice Verifies reward state and balances
-    function _assertResponseRewarded(
-        uint256 responseId,
+    function _assertSubmissionRewarded(
+        uint256 submissionId,
         address solver,
         uint256 expectedEthAmount,
         uint256 solverBalanceBefore
     ) internal view {
-        (,, bool isRewarded) = wishpool.responses(responseId);
-        assertTrue(isRewarded, "Response should be marked as rewarded");
+        (,, bool isRewarded) = wishpool.submissions(submissionId);
+        assertTrue(isRewarded, "Submission should be marked as rewarded");
         assertEq(
             solver.balance,
             solverBalanceBefore + expectedEthAmount,
