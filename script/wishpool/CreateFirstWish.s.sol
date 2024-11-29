@@ -2,10 +2,10 @@
 pragma solidity ^0.8.18;
 
 import "forge-std/Script.sol";
-import {Wishpool6} from "../../src/Wishpool/Wishpool6.sol";
+import {Wishpool7} from "../../src/Wishpool/Wishpool7.sol";
 import {IBodhi} from "../../src/interface/IBodhi.sol";
 
-contract CreateFirstMission is Script {
+contract CreateFirstWish is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address payable wishpoolAddress = payable(vm.envAddress("WISHPOOL_ADDRESS"));
@@ -13,20 +13,19 @@ contract CreateFirstMission is Script {
 
         vm.startBroadcast(deployerPrivateKey);
         
-        Wishpool6 wishpool = Wishpool6(wishpoolAddress);
+        Wishpool7 wishpool = Wishpool7(wishpoolAddress);
         IBodhi bodhi = wishpool.BODHI();
 
-        // Create a open mission (solver is address(0))
+        // Create an open wish (solver is address(0))
         uint256 wishId = bodhi.assetIndex();
         wishpool.createWish(arTxId, address(0));
 
-        console.log("First mission created with ID:", wishId);
+        console.log("First wish created with ID:", wishId);
 
-        // Verify the mission
-        (address creator, address solver, bool isOpen) = wishpool.wishes(wishId);
+        // Verify the wish
+        (address creator, address solver) = wishpool.wishes(wishId);
         console.log("Wish creator:", creator);
         console.log("Wish solver:", solver);
-        console.log("Wish is open:", isOpen);
 
         vm.stopBroadcast();
     }
