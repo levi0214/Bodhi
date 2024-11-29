@@ -1,12 +1,33 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.18;
 
+// Changelog: Wishpool6 to Wishpool7
+//
+// Mechanism change (no close wish), and naming changes.
+//
+// 1. Terminology Changes:
+//    - 'Response' renamed back to 'Submission'
+//    - 'CreateResponse' event renamed to 'Submit'
+//    - 'CloseWish' event renamed to 'Reward'
+//
+// 2. Structural Changes:
+//    - Removed 'isOpen' field from Wish struct
+//    - 'Response' struct renamed to 'Submission' (fields unchanged)
+//
+// 3. Function Changes:
+//    - 'createResponse' renamed to 'submit'
+//    - 'closeWish' renamed to 'reward'
+//    - Added 'amount' parameter to reward function for custom reward amounts
+//
+// 4. Behavior Changes:
+//    - Reward amount can be specified, defaults to previous behavior if zero
+
 import {ERC1155TokenReceiver} from "../peripheral/ERC1155TokenReceiver.sol";
 import {IBodhi} from "../interface/IBodhi.sol";
 
 error InvalidWish();
 error Unauthorized();
-error InvalidResponse();
+error InvalidResponse();  // TODO: rename to InvalidSubmission in next version
 error EtherTransferFailed();
 
 contract Wishpool7 is ERC1155TokenReceiver {
