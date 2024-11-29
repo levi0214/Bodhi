@@ -20,10 +20,10 @@ contract Wishpool7Test is Test, ERC1155TokenReceiver {
     uint256 public constant INITIAL_BALANCE = 100 ether;
 
     event CreateWish(uint256 indexed wishId, address indexed creator, address indexed solver);
-    event Submit(uint256 indexed wishId, address indexed solver, uint256 submissionId);
+    event Submit(uint256 indexed wishId, address indexed creator, uint256 submissionId);
     event Reward(
         uint256 indexed wishId,
-        address indexed solver,
+        address indexed to,
         uint256 indexed submissionId,
         uint256 tokenAmount,
         uint256 ethAmount
