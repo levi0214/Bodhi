@@ -13,6 +13,7 @@ error InvalidAmount();
 
 contract Wishpool8 is ERC1155TokenReceiver, ReentrancyGuard {
     IBodhi public immutable BODHI;
+    address public immutable TREASURY;
 
     struct Wish {
         address creator;
@@ -34,8 +35,9 @@ contract Wishpool8 is ERC1155TokenReceiver, ReentrancyGuard {
         uint256 indexed wishId, address indexed to, uint256 indexed submissionId, uint256 tokenAmount, uint256 ethAmount
     );
 
-    constructor(address _bodhi) {
+    constructor(address _bodhi, address _treasury) {
         BODHI = IBodhi(_bodhi);
+        TREASURY = _treasury;
     }
 
     function createWish(string calldata arTxId, address solver) public returns (uint256 wishId) {
@@ -98,6 +100,12 @@ contract Wishpool8 is ERC1155TokenReceiver, ReentrancyGuard {
     function submitAndReward(uint256 wishId, string calldata arTxId, uint256 amount) external nonReentrant {
         uint256 submissionId = submit(wishId, arTxId);
         reward(wishId, submissionId, amount);
+    }
+
+    function withdraw() external {
+        if (msg.sender != TREASURY) revert Unauthorized();
+        (bool success,) = TREASURY.call{value: address(this).balance}("");
+        if (!success) revert EtherTransferFailed();
     }
 
     receive() external payable {}

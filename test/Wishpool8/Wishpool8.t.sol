@@ -62,7 +62,7 @@ contract Wishpool8Test is Test, ERC1155TokenReceiver {
     // Base setup
     function setUp() public {
         bodhi = new Bodhi();
-        wishpool = new Wishpool8(address(bodhi));
+        wishpool = new Wishpool8(address(bodhi), address(this));
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
         vm.deal(charlie, 100 ether);
@@ -377,6 +377,89 @@ contract Wishpool8Test is Test, ERC1155TokenReceiver {
         wishpool.reward(openWishId, submissionId, 2 ether); // More than available
     }
 
+    // ============ Withdraw Tests ============
+    
+    /// @notice Test basic withdrawal
+    function test_Withdraw() public {
+        vm.deal(address(wishpool), 1 ether);
+        
+        uint256 treasuryBalanceBefore = address(this).balance;
+        uint256 contractBalanceBefore = address(wishpool).balance;
+        
+        wishpool.withdraw();
+        
+        assertEq(address(wishpool).balance, 0, "Contract should have 0 balance after withdraw");
+        assertEq(
+            address(this).balance,
+            treasuryBalanceBefore + contractBalanceBefore,
+            "Treasury should receive all funds"
+        );
+    }
+
+    /// @notice Test unauthorized withdrawal
+    function testFail_WithdrawUnauthorized() public {
+        vm.deal(address(wishpool), 1 ether);
+        
+        vm.prank(alice);
+        wishpool.withdraw();
+    }
+
+    /// @notice Test withdraw with zero balance
+    function test_WithdrawZeroBalance() public {
+        uint256 treasuryBalanceBefore = address(this).balance;
+        
+        wishpool.withdraw();
+        
+        assertEq(address(wishpool).balance, 0, "Contract balance should be 0");
+        assertEq(
+            address(this).balance,
+            treasuryBalanceBefore,
+            "Treasury balance should not change"
+        );
+    }
+
+    /// @notice Test multiple withdrawals
+    function test_MultipleWithdraws() public {
+        // First withdrawal
+        vm.deal(address(wishpool), 1 ether);
+        wishpool.withdraw();
+        assertEq(address(wishpool).balance, 0, "Contract should have 0 balance after first withdraw");
+        
+        // Second withdrawal with new funds
+        vm.deal(address(wishpool), 0.5 ether);
+        wishpool.withdraw();
+        assertEq(address(wishpool).balance, 0, "Contract should have 0 balance after second withdraw");
+    }
+
+    /// @notice Test withdrawal after receiving creator fees
+    function test_WithdrawAfterCreatorFees() public {
+        // Setup: Create wish and simulate trading to generate creator fees
+        uint256 wishId = bodhi.assetIndex();
+        vm.prank(alice);
+        wishpool.createWish("testWish", address(0));
+        
+        // Simulate trading to generate creator fees
+        vm.startPrank(bob);
+        uint256 tradeAmount = 1 ether;
+        uint256 buyPrice = bodhi.getBuyPriceAfterFee(wishId, tradeAmount);
+        bodhi.buy{value: buyPrice}(wishId, tradeAmount);
+        bodhi.sell(wishId, tradeAmount);
+        vm.stopPrank();
+        
+        uint256 treasuryBalanceBefore = address(this).balance;
+        uint256 contractBalance = address(wishpool).balance;
+        require(contractBalance > 0, "Should have received creator fees");
+        
+        wishpool.withdraw();
+        
+        assertEq(address(wishpool).balance, 0, "Contract should have 0 balance after withdraw");
+        assertEq(
+            address(this).balance,
+            treasuryBalanceBefore + contractBalance,
+            "Treasury should receive all creator fees"
+        );
+    }
+
     // ============ Helper Functions ============
 
     /// @notice Add funds to a wish
@@ -422,4 +505,7 @@ contract Wishpool8Test is Test, ERC1155TokenReceiver {
         bodhi.sell(wishId, tradeAmount);
         vm.stopPrank();
     }
+
+    // 添加 receive 函数以接收 ETH
+    receive() external payable {}
 }
