@@ -2,7 +2,7 @@
 pragma solidity ^0.8.18;
 
 import "forge-std/Script.sol";
-import {Wishpool7} from "../../src/Wishpool/Wishpool7.sol";
+import {Wishpool8} from "../../src/Wishpool/Wishpool8.sol";
 import {IBodhi} from "../../src/interface/IBodhi.sol";
 
 contract CreateFirstWish is Script {
@@ -13,7 +13,7 @@ contract CreateFirstWish is Script {
 
         vm.startBroadcast(deployerPrivateKey);
         
-        Wishpool7 wishpool = Wishpool7(wishpoolAddress);
+        Wishpool8 wishpool = Wishpool8(wishpoolAddress);
         IBodhi bodhi = wishpool.BODHI();
 
         // Create an open wish (solver is address(0))
