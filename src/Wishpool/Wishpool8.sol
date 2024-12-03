@@ -9,7 +9,6 @@ error InvalidWish();
 error Unauthorized();
 error InvalidSubmission();
 error EtherTransferFailed();
-error InvalidAmount();
 
 contract Wishpool8 is ERC1155TokenReceiver, ReentrancyGuard {
     IBodhi public immutable BODHI;
@@ -59,21 +58,20 @@ contract Wishpool8 is ERC1155TokenReceiver, ReentrancyGuard {
         BODHI.create(arTxId);
     }
 
+    // amount == 0 means "all", is there a better way?
     function reward(uint256 wishId, uint256 submissionId, uint256 amount) public {
         Wish memory wish = wishes[wishId];
         if (msg.sender != wish.creator && msg.sender != wish.solver) revert Unauthorized();
 
         Submission storage submission = submissions[submissionId];
-        if (submission.creator == address(0) || submission.wishId != wishId) revert InvalidSubmission();
+        if (submission.creator == address(0) || submission.wishId != wishId || submission.isRewarded) revert InvalidSubmission();
         if (wish.solver != address(0) && submission.creator != wish.solver) revert Unauthorized();
-        if (submission.isRewarded) revert InvalidSubmission();
 
         submission.isRewarded = true;
 
         uint256 balance = BODHI.balanceOf(address(this), wishId);
         uint256 supply = BODHI.totalSupply(wishId);
         uint256 rewardAmount = amount == 0 ? (balance + 1 ether > supply ? supply - 1 ether : balance) : amount;
-
         uint256 sellPrice = BODHI.getSellPriceAfterFee(wishId, rewardAmount);
 
         emit Reward(wishId, submission.creator, submissionId, rewardAmount, sellPrice);
