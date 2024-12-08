@@ -2,17 +2,17 @@
 pragma solidity ^0.8.18;
 
 import "forge-std/Test.sol";
-import "../../src/Wishpool/Wishpool8.sol";
+import "../../src/Wishpool/Wishpool.sol";
 import {Bodhi} from "../../src/Bodhi.sol";
 import {ERC1155TokenReceiver} from "../../src/peripheral/ERC1155TokenReceiver.sol";
 
 /// @notice Contract for testing reentrancy attacks
 contract ReentrancyAttacker is ERC1155TokenReceiver {
-    Wishpool8 private wishpool;
+    Wishpool private wishpool;
     uint256 private wishId;
     uint256 private attackCount;
 
-    constructor(Wishpool8 _wishpool, uint256 _wishId) {
+    constructor(Wishpool _wishpool, uint256 _wishId) {
         wishpool = _wishpool;
         wishId = _wishId;
     }
@@ -39,8 +39,8 @@ contract ReentrancyAttacker is ERC1155TokenReceiver {
     }
 }
 
-contract Wishpool8Test is Test, ERC1155TokenReceiver {
-    Wishpool8 public wishpool;
+contract WishpoolTest is Test, ERC1155TokenReceiver {
+    Wishpool public wishpool;
     Bodhi public bodhi;
     address public alice = address(0x1);
     address public bob = address(0x2);
@@ -62,7 +62,7 @@ contract Wishpool8Test is Test, ERC1155TokenReceiver {
     // Base setup
     function setUp() public {
         bodhi = new Bodhi();
-        wishpool = new Wishpool8(address(bodhi), address(this));
+        wishpool = new Wishpool(address(bodhi), address(this));
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
         vm.deal(charlie, 100 ether);

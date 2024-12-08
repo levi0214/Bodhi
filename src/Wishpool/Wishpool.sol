@@ -10,7 +10,7 @@ error Unauthorized();
 error InvalidSubmission();
 error EtherTransferFailed();
 
-contract Wishpool8 is ERC1155TokenReceiver, ReentrancyGuard {
+contract Wishpool is ERC1155TokenReceiver, ReentrancyGuard {
     IBodhi public immutable BODHI;
     address public immutable TREASURY;
 
