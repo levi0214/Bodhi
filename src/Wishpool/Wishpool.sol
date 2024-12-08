@@ -16,7 +16,7 @@ contract Wishpool is ERC1155TokenReceiver, ReentrancyGuard {
 
     struct Wish {
         address creator;
-        address solver; // Optional designated solver
+        address solver; // Designated solver. Zero address means open to all solvers.
     }
 
     struct Submission {
@@ -58,7 +58,6 @@ contract Wishpool is ERC1155TokenReceiver, ReentrancyGuard {
         BODHI.create(arTxId);
     }
 
-    // amount == 0 means "all", is there a better way?
     function reward(uint256 wishId, uint256 submissionId, uint256 amount) public {
         Wish memory wish = wishes[wishId];
         if (msg.sender != wish.creator && msg.sender != wish.solver) revert Unauthorized();
